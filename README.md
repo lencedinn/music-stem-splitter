@@ -6,7 +6,10 @@
 
 纯本地运行，不联网、不上传。Windows 图形界面，单文件 Python 脚本 + 一个可选音色推测模块。
 
-![screenshot](docs/screenshot.png)
+**界面支持中英文切换**（打包版右上角「语言 / Language」）：
+
+![中文界面](docs/screenshot-zh.png)
+![English UI](docs/screenshot-en.png)
 
 ---
 
@@ -21,6 +24,7 @@
 | **音视频分离** | 可额外导出一份「无声视频」（视频流原样复制，不重编码） |
 | **音色推测** | 生成报告：频段分布、BPM、估计有哪些成分（鼓/贝斯/pad/pluck…）+ 依据 |
 | **批量处理** | 一次丢一堆文件，文件夹递归 |
+| **中英文界面** | 打包版右上角可切换（源码版固定中文） |
 
 ### 三种勾选框决定输出
 
@@ -190,6 +194,7 @@ Runs **100% locally**. No upload, no network. Windows GUI, one Python script plu
 | **Audio/video demux** | Optionally also exports a silent video (video stream copied, not re-encoded) |
 | **Timbre guess** | Report: band distribution, BPM, likely elements (drums/bass/pad/pluck…) with reasoning |
 | **Batch** | Drop a whole folder, recursive |
+| **UI language** | Chinese / English toggle in the portable build (source build is Chinese) |
 
 ### Three checkboxes decide the output
 

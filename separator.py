@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 音轨分离器 — 从音频/视频里分离人声与伴奏
 
@@ -28,6 +28,31 @@ from pathlib import Path
 
 APP_NAME = "音轨分离器"
 APP_VER = "2.4"
+
+# 中英文切换：只有打包版（exe）显示语言开关；源码版固定中文，界面不变。
+try:
+    import i18n as _i18n
+except Exception:                       # 源码版没有这个模块也照常跑
+    _i18n = None
+
+LANG = {"code": "zh"}
+
+
+def L(zh, en=None):
+    """按当前语言返回文案；没给英文就退回中文。"""
+    if LANG["code"] == "en" and en:
+        return en
+    return zh
+
+
+def short_path(p, keep=2):
+    """日志里显示路径时只保留末尾几段，避免把完整用户名路径暴露出去。"""
+    s = str(p).replace("/", "\\")
+    parts = [x for x in s.split("\\") if x]
+    if len(parts) <= keep:
+        return s
+    return "…\\" + "\\".join(parts[-keep:])
+
 
 if getattr(sys, "frozen", False):
     # 打包成 exe 后，__file__ 在 _internal 里；以 exe 所在目录为准
@@ -571,8 +596,11 @@ def run_gui():
     import tkinter as tk
     from tkinter import ttk, filedialog, messagebox
 
+    TITLE_ZH = f"{APP_NAME} v{APP_VER} — 人声 / 伴奏 分离"
+    TITLE_EN = f"Stem Splitter v{APP_VER} — Vocals / Instrumental"
+
     root = tk.Tk()
-    root.title(f"{APP_NAME} v{APP_VER} — 人声 / 伴奏 分离")
+    root.title(TITLE_ZH)
     root.geometry("1020x700")
     root.minsize(880, 620)
 
@@ -603,8 +631,20 @@ def run_gui():
         if info:
             f = f"{info.get('codec') or ''} {info.get('sr') or ''}Hz"
             if info.get("has_video"):
-                f += f" +{info.get('video_codec') or '视频'}"
-        return (job.name, job.kind, fmt_duration(info.get("duration", 0)), f, job.status)
+                f += f" +{info.get('video_codec') or L('视频', 'video')}"
+        return (job.name, _tr(job.kind), fmt_duration(info.get("duration", 0)),
+                f, _tr(job.status))
+
+    KIND_EN = {"音频": "audio", "视频": "video", "未知": "unknown"}
+    STATUS_EN = {"等待": "waiting", "读取中": "reading", "解码中": "decoding",
+                 "分离中": "separating", "AI 分离中": "separating (AI)",
+                 "完成": "done", "失败": "failed", "已停止": "stopped"}
+
+    def _tr(value):
+        """把类型/状态这类内部中文词按当前语言显示。"""
+        if LANG["code"] != "en":
+            return value
+        return KIND_EN.get(value) or STATUS_EN.get(value) or value
 
     def add_files():
         paths = filedialog.askopenfilenames(
@@ -717,6 +757,41 @@ def run_gui():
     ttk.Button(bar, text="音色分析（推测）", command=analyze_timbre)\
         .pack(side="left", padx=(6, 0))
 
+    # ---- 语言切换（只在打包版里出现；源码版固定中文）
+    HEAD_COLS = (("name", "文件", "File"), ("kind", "类型", "Type"),
+                 ("dur", "时长", "Duration"), ("fmt", "源格式", "Source"),
+                 ("status", "状态", "Status"))
+    if _i18n and getattr(sys, "frozen", False):
+        lang_var = tk.StringVar(value="中文")
+        ttk.Label(bar, text="语言 / Language").pack(side="left", padx=(16, 4))
+        lang_cb = ttk.Combobox(bar, textvariable=lang_var,
+                               values=["中文", "English"], state="readonly", width=9)
+        lang_cb.pack(side="left")
+
+        def switch_lang(_evt=None):
+            code = "en" if lang_var.get() == "English" else "zh"
+            LANG["code"] = code
+            _i18n.apply_lang(root, code,
+                             title=(TITLE_EN if code == "en" else TITLE_ZH),
+                             exclude=(lang_cb,))
+            for col, zh, en in HEAD_COLS:
+                tree.heading(col, text=(en if code == "en" else zh))
+            for j in state["jobs"]:
+                try:
+                    tree.item(str(id(j)), values=_row(j))
+                except tk.TclError:
+                    pass
+            # 日志里的启动信息也重写一遍，否则切到英文后日志还是中文
+            try:
+                log_txt.delete("1.0", "end")
+                write_banner()
+            except Exception:
+                pass
+
+        lang_cb.bind("<<ComboboxSelected>>", switch_lang)
+    else:
+        lang_var = None
+
     # ---- 设置
     box = ttk.LabelFrame(root, text="分离设置", padding=10)
     box.pack(fill="x", padx=10, pady=(8, 4))
@@ -783,7 +858,9 @@ def run_gui():
 
     r += 1
     ttk.Label(box, text="输出目录：").grid(row=r, column=0, sticky="w", pady=(8, 0))
-    out_var = tk.StringVar(value=str(Path.home() / "Music" / "分离输出"))
+    out_var = tk.StringVar(
+        value=os.environ.get("STEMSPLIT_OUT")
+        or str(APP_DIR / L("分离输出", "output")))
     ttk.Entry(box, textvariable=out_var, width=58)\
         .grid(row=r, column=1, columnspan=4, sticky="we", pady=(8, 0))
 
@@ -823,27 +900,42 @@ def run_gui():
 
     # 自检
     has_demucs = demucs_available()
-    if not FFMPEG:
-        log("✗ 没有找到 ffmpeg，无法解码/编码")
-    if np is None:
-        log("✗ 缺少 numpy，无法分离")
-    log(f"{APP_NAME} v{APP_VER} 就绪")
-    if FFMPEG:
-        log(f"ffmpeg：{FFMPEG}")
-    else:
-        log("✗ 没找到 ffmpeg / ffprobe —— 程序无法解码音频。")
-        log(f"  下载：{FFMPEG_DOWNLOAD}")
-        log("  解压后把 ffmpeg.exe 和 ffprobe.exe 放进本程序的 bin\\ 目录，"
-            "或加进系统 PATH，然后重启本程序。")
-    if has_demucs:
-        log("检测到 Demucs —— 勾选后可用 AI 分离（质量高得多）")
-    else:
-        dm_cb.configure(state="disabled",
-                        text="用 Demucs（未安装，当前用内置算法）")
-        log("Demucs 未安装 —— 所以这个框是灰的，不影响其它功能。")
-        log("  想用 AI 分离：pip install --target pylibs demucs，然后重启。")
-    log(f"程序目录：{APP_DIR}")
-    log("内置算法说明：分离的是「居中的人声」，混响重或双声道的曲子效果会差一些。")
+
+    def write_banner():
+        """启动横幅：切换语言时会清空日志并重写一遍。"""
+        if not FFMPEG:
+            log(L("✗ 没有找到 ffmpeg，无法解码/编码",
+                  "✗ FFmpeg not found — cannot decode/encode"))
+        if np is None:
+            log(L("✗ 缺少 numpy，无法分离", "✗ numpy missing — cannot separate"))
+        log(L(f"{APP_NAME} v{APP_VER} 就绪", f"Stem Splitter v{APP_VER} ready"))
+        if FFMPEG:
+            log(f"ffmpeg: {short_path(FFMPEG)}")
+        else:
+            log(L("✗ 没找到 ffmpeg / ffprobe —— 程序无法解码音频。",
+                  "✗ ffmpeg / ffprobe not found — cannot decode audio."))
+            log(L(f"  下载：{FFMPEG_DOWNLOAD}", f"  Download: {FFMPEG_DOWNLOAD}"))
+            log(L("  解压后把 ffmpeg.exe 和 ffprobe.exe 放进本程序的 bin\\ 目录，"
+                  "或加进系统 PATH，然后重启本程序。",
+                  "  Unzip and put ffmpeg.exe / ffprobe.exe into the bin\\ folder, "
+                  "or add them to PATH, then restart."))
+        if has_demucs:
+            log(L("检测到 Demucs —— 勾选后可用 AI 分离（质量高得多）",
+                  "Demucs detected — tick the box for AI separation (much cleaner)"))
+        else:
+            dm_cb.configure(state="disabled",
+                            text=L("用 Demucs（未安装，当前用内置算法）",
+                                   "Use Demucs (not installed, using built-in)"))
+            log(L("Demucs 未安装 —— 所以这个框是灰的，不影响其它功能。",
+                  "Demucs not installed — that's why the box is greyed out."))
+            log(L("  想用 AI 分离：pip install --target pylibs demucs，然后重启。",
+                  "  For AI separation: pip install --target pylibs demucs, then restart."))
+        log(L(f"程序目录：{short_path(APP_DIR)}", f"App folder: {short_path(APP_DIR)}"))
+        log(L("内置算法说明：分离的是「居中的人声」，混响重或双声道的曲子效果会差一些。",
+              "Built-in algorithm: extracts center-panned vocals; "
+              "reverb-heavy or wide material degrades."))
+
+    # 启动横幅稍后再写（要等语言设置生效）；先什么都不做
 
     def poll():
         try:
@@ -918,12 +1010,14 @@ def run_gui():
         btn_stop["state"] = "normal"
         prog["value"] = 0
         log("=" * 60)
-        opts = ["分离人声" if sep_var.get() else "不分离人声（整段当伴奏）"]
+        opts = [L("分离人声", "separate vocals") if sep_var.get()
+                else L("不分离人声（整段当伴奏）", "no vocal separation (whole file as instrumental)")]
         if full_var.get():
-            opts.append("完整伴奏")
+            opts.append(L("完整伴奏", "full instrumental"))
         if bands_var.get():
-            opts.append("伴奏低/中/高")
-        log(f"开始：{len(jobs)} 个文件 · {' + '.join(opts)} · 导出 {fmt_var.get()}")
+            opts.append(L("伴奏低/中/高", "instrumental low/mid/high"))
+        log(L(f"开始：{len(jobs)} 个文件 · {' + '.join(opts)} · 导出 {fmt_var.get()}",
+              f"Start: {len(jobs)} file(s) · {' + '.join(opts)} · format {fmt_var.get()}"))
 
         pending = list(groups.items())
         state["pending"] = pending
@@ -940,8 +1034,12 @@ def run_gui():
                 c1, c2 = 250.0, 4000.0
             if not (20 < c1 < c2 < 20000):
                 c1, c2 = 250.0, 4000.0
-            w = Worker(jl, outdir, fmt_var.get(), br_var.get(), sr_var.get(),
-                       str_var.get(), silent_var.get(),
+            # 界面上可能是英文/中文，这里统一转回内部中文键
+            fmt_key = _i18n.to_zh(fmt_var.get()) if _i18n else fmt_var.get()
+            str_key = _i18n.to_zh(str_var.get()) if _i18n else str_var.get()
+            sr_key = _i18n.to_zh(sr_var.get()) if _i18n else sr_var.get()
+            w = Worker(jl, outdir, fmt_key, br_var.get(), sr_key,
+                       str_key, silent_var.get(),
                        bool(demucs_var.get() and has_demucs), events,
                        sep_vocals=bool(sep_var.get()),
                        want_full=bool(full_var.get()),
@@ -977,6 +1075,60 @@ def run_gui():
         messagebox.showinfo("还没有输出", "这个文件还没处理完。")
 
     tree.bind("<Double-1>", on_double)
+
+    # ---- 启动语言（默认中文；可用环境变量覆盖，便于测试）
+    _lang0 = os.environ.get("STEMSPLIT_LANG", "zh")
+    if _i18n and _lang0 == "en":
+        LANG["code"] = "en"
+        _i18n.apply_lang(root, "en", title=TITLE_EN,
+                         exclude=((lang_cb,) if lang_var is not None else ()))
+        for col, _zh, en in HEAD_COLS:
+            tree.heading(col, text=en)
+        if lang_var is not None:
+            lang_var.set("English")
+
+    write_banner()
+
+    # ---- 测试用：把界面文字导出后自动退出（正常使用不会触发）
+    _dump = os.environ.get("STEMSPLIT_UI_DUMP")
+    if _dump and _i18n:
+        def _do_dump():
+            texts = []
+            combos = []
+            for w in _i18n._walk(root):
+                try:
+                    t = w.cget("text")
+                    if t:
+                        texts.append(str(t))
+                except Exception:
+                    pass
+                try:
+                    if str(w.winfo_class()) == "TCombobox":
+                        var = str(w.cget("textvariable"))
+                        cur = root.getvar(var) if var else ""
+                        combos.append(f"{w.cget('values')} -> {cur}")
+                except Exception:
+                    pass
+            heads = [tree.heading(c)["text"] for c in ("name", "kind", "dur", "fmt", "status")]
+            try:
+                Path(_dump).write_text(
+                    "TITLE: " + root.title() + "\n"
+                    + "HEADERS: " + " | ".join(str(h) for h in heads) + "\n"
+                    + "COMBOS:\n" + "\n".join(combos) + "\n"
+                    + "TEXTS:\n" + "\n".join(texts) + "\n",
+                    encoding="utf-8")
+            except Exception:
+                pass
+            root.destroy()
+        root.after(1200, _do_dump)
+
+    _auto = os.environ.get("STEMSPLIT_AUTOCLOSE")
+    if _auto:
+        try:
+            root.after(int(float(_auto) * 1000), root.destroy)
+        except Exception:
+            pass
+
     root.after(120, poll)
     root.mainloop()
 

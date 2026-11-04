@@ -1,15 +1,50 @@
-﻿# music-stem-splitter · 音轨分离器
+# music-stem-splitter · 音轨分离器
 
 **中文** | [English](#english)
 
 把一个音频或视频拆成 **人声 / 伴奏**，伴奏还能再切 **低 / 中 / 高** 三段——给 remix、采样、练唱、消音用。
 
-纯本地运行，不联网、不上传。Windows 图形界面，单文件 Python 脚本 + 一个可选音色推测模块。
-
-**界面支持中英文切换**（打包版右上角「语言 / Language」）：
+纯本地运行，不联网、不上传。Windows 图形界面。
 
 ![中文界面](docs/screenshot-zh.png)
 ![English UI](docs/screenshot-en.png)
+
+---
+
+## 怎么用：两种方式
+
+### ① 普通用户 — 下载便携版（**零安装**，推荐）
+
+去右边的 **Releases**，下载最新的 `*.zip`，解压到任意文件夹（含 U 盘），
+**双击 `音轨分离器.exe`** 就能用。
+
+| 需要装什么 | 便携版 |
+|---|---|
+| Python | ❌ **不需要**（已打包） |
+| numpy | ❌ 已打包 |
+| FFmpeg | ❌ 已打包 |
+| Demucs / AI 模型 | ❌ 已打包，断网也能跑 |
+| 联网 | ❌ 不需要（首次运行 Demucs 也不用） |
+
+**体积约 1.37 GB**，因为把 FFmpeg、Python、Demucs 全塞进去了。
+**界面支持中英文切换**（右上角「语言 / Language」）。
+
+### ② 开发者 — 从源码运行
+
+仓库里只有源码（几十 KB），**不含二进制**。跑起来需要自己装依赖：
+
+```bash
+git clone https://github.com/lencedinn/music-stem-splitter.git
+cd music-stem-splitter
+pip install numpy
+# 还需要 FFmpeg，见下面「安装」
+python separator.py
+```
+
+**源码运行是纯中文界面**（语言下拉框只在打包成 exe 后才出现）。
+
+> 两条路的界面和功能完全一样，区别只是「谁准备运行环境」。
+> 想自己打包成 exe 见文末「构建便携版」。
 
 ---
 
@@ -24,7 +59,7 @@
 | **音视频分离** | 可额外导出一份「无声视频」（视频流原样复制，不重编码） |
 | **音色推测** | 生成报告：频段分布、BPM、估计有哪些成分（鼓/贝斯/pad/pluck…）+ 依据 |
 | **批量处理** | 一次丢一堆文件，文件夹递归 |
-| **中英文界面** | 打包版右上角可切换（源码版固定中文） |
+| **中英文界面** | **便携版**右上角可切换；源码运行固定中文 |
 
 ### 三种勾选框决定输出
 
@@ -41,7 +76,9 @@
 
 ---
 
-## 安装
+## 安装（仅源码运行需要）
+
+> 如果你用的是 Releases 里的便携版，**这一节可以整段跳过** —— 那里什么都不用装。
 
 ### 1. Python
 
@@ -55,7 +92,7 @@ pip install numpy
 
 ### 3. FFmpeg（必须）
 
-程序**不自带** FFmpeg，需要你自己装：
+源码版**不自带** FFmpeg，需要你自己装：
 
 - **Windows**：从 <https://www.gyan.dev/ffmpeg/builds/> 下载 `ffmpeg-release-full.7z`，
   解压后把 `ffmpeg.exe` 和 `ffprobe.exe` 放进程序的 `bin\` 目录，**或**加入系统 PATH。
@@ -149,11 +186,16 @@ python separator.py --selftest # 环境自检，结果写到 自检结果.txt
 ```bash
 pip install pyinstaller
 pyinstaller --noconfirm --windowed --name "stem-splitter" ^
-    --hidden-import timbre --paths . separator.py
+    --hidden-import timbre --hidden-import i18n --paths . separator.py
 ```
 
-然后把 `ffmpeg.exe` / `ffprobe.exe` 放进产物目录的 `bin\`。
-AI 分离需要另外准备 `runtime\`（Python）和 `pylibs\`（demucs + torch）。
+打包产物里：
+
+- `bin\` 放 `ffmpeg.exe` / `ffprobe.exe`
+- AI 分离需要另外准备 `runtime\`（一份 Python）和 `pylibs\`（demucs + torch）
+- 模型可以放进 `torchcache\hub\checkpoints\`，程序会自动用它，不用联网下载
+
+**打包后才会出现语言切换下拉框**（`i18n.py` 里的开关判断 `sys.frozen`），源码运行不受影响。
 
 ---
 
@@ -179,7 +221,44 @@ AI 分离需要另外准备 `runtime\`（Python）和 `pylibs\`（demucs + torch
 
 Split any audio or video into **vocals / instrumental**, then optionally cut the instrumental into **low / mid / high** bands — for remixing, sampling, karaoke, and practice.
 
-Runs **100% locally**. No upload, no network. Windows GUI, one Python script plus an optional timbre-guessing module.
+Runs **100% locally**. No upload, no network. Windows GUI.
+
+---
+
+## Two ways to use it
+
+### ① Most people — download the portable build (**zero install**)
+
+Grab the latest `*.zip` from **Releases**, extract anywhere (USB stick works),
+and double-click `音轨分离器.exe` (Stem Splitter).
+
+| Do you need to install anything? | Portable build |
+|---|---|
+| Python | ❌ **no** (bundled) |
+| numpy | ❌ bundled |
+| FFmpeg | ❌ bundled |
+| Demucs / AI model | ❌ bundled, works offline |
+| Internet | ❌ not required |
+
+**~1.37 GB unpacked**, because FFmpeg, Python and Demucs are all inside.
+The UI can be switched **Chinese / English** (top right: 「语言 / Language」).
+
+### ② Developers — run from source
+
+This repository contains **source only** (tens of KB, no binaries):
+
+```bash
+git clone https://github.com/lencedinn/music-stem-splitter.git
+cd music-stem-splitter
+pip install numpy
+# FFmpeg is also required — see "Install" below
+python separator.py
+```
+
+**Running from source is Chinese-only** (the language dropdown is only enabled in the packaged exe).
+
+> Same features either way — the only difference is who prepares the runtime.
+> To build your own exe, see "Build the portable version" at the end.
 
 ---
 
@@ -194,7 +273,7 @@ Runs **100% locally**. No upload, no network. Windows GUI, one Python script plu
 | **Audio/video demux** | Optionally also exports a silent video (video stream copied, not re-encoded) |
 | **Timbre guess** | Report: band distribution, BPM, likely elements (drums/bass/pad/pluck…) with reasoning |
 | **Batch** | Drop a whole folder, recursive |
-| **UI language** | Chinese / English toggle in the portable build (source build is Chinese) |
+| **UI language** | Chinese / English toggle in the **portable build**; source build is Chinese |
 
 ### Three checkboxes decide the output
 
@@ -211,11 +290,13 @@ Runs **100% locally**. No upload, no network. Windows GUI, one Python script plu
 
 ---
 
-## Install
+## Install (source runs only)
+
+> Using the portable build from Releases? **Skip this whole section** — nothing to install.
 
 1. **Python 3.9+**
 2. **numpy** — `pip install numpy`
-3. **FFmpeg (required, not bundled)**
+3. **FFmpeg (required for source runs; it is bundled in the portable build)**
    - Windows: download from <https://www.gyan.dev/ffmpeg/builds/>, put `ffmpeg.exe` and `ffprobe.exe` into `bin\` or onto `PATH`
    - macOS: `brew install ffmpeg`
    - Linux: `sudo apt install ffmpeg`

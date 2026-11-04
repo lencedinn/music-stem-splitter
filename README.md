@@ -161,6 +161,27 @@ python separator.py --selftest # 环境自检，结果写到 自检结果.txt
 
 ---
 
+## 分发与第三方许可
+
+本仓库只有源码，不包含任何第三方二进制。
+
+**便携版（Release 附件）里打包了 FFmpeg、Python、PyTorch、Demucs**，
+它们的授权与获取方式集中在便携版目录下的 `第三方许可\`：
+
+| 组件 | 授权 | 说明 |
+|---|---|---|
+| FFmpeg 9.0.2 full_build | **GPL v3** | 含 x264/x265；GPL 要求分发二进制时提供对应源码，见许可说明里的源码地址与书面要约 |
+| Python 3.12 | PSF License 2.0 | |
+| PyTorch 2.15.0+cpu | BSD-3-Clause | |
+| Demucs 4.1.0 | MIT | 模型权重随其发布；训练数据 MUSDB18 另有条款 |
+| numpy 2.3.5 | BSD-3-Clause | |
+| 其它依赖 | 见各 `*.dist-info` | einops(MIT)、huggingface_hub(Apache-2.0)、lameenc(LGPL) 等 |
+
+本程序通过**独立进程**调用 FFmpeg，不链接其代码，因此本程序自身仍按 MIT 发布。
+
+> 想完全避开 GPL 分发义务，可以改用 **LGPL 版 FFmpeg**（不含 x264/x265）——
+> 本程序只处理音频，用不到 H.264/H.265 编码器。
+
 ## 依赖与授权
 
 本项目 MIT 授权，但依赖了这些第三方组件。**分发时请保留各自的版权声明。**
@@ -333,6 +354,28 @@ It measures band distribution, spectral centroid, spectral flatness, onset densi
 **It is not source separation / instrument recognition.** It cannot identify *which* synthesizer was used — Serum, Massive and Vital can produce spectrally identical supersaws. Accuracy is roughly 60%; it helps you decide where to cut, not to produce an inventory.
 
 ---
+
+## Distribution and third-party licenses
+
+This repository contains **source only** — no third-party binaries.
+
+**The portable build (Release asset) bundles FFmpeg, Python, PyTorch and Demucs.**
+Their licenses and source information are collected in `第三方许可\` (third-party notices)
+inside that folder:
+
+| Component | License | Note |
+|---|---|---|
+| FFmpeg 9.0.2 full_build | **GPL v3** | includes x264/x265; GPL requires source availability when distributing the binary — see the notice file for source URL and written offer |
+| Python 3.12 | PSF License 2.0 | |
+| PyTorch 2.15.0+cpu | BSD-3-Clause | |
+| Demucs 4.1.0 | MIT | model weights ship with it; training data MUSDB18 has separate terms |
+| numpy 2.3.5 | BSD-3-Clause | |
+| Other deps | see each `*.dist-info` | einops (MIT), huggingface_hub (Apache-2.0), lameenc (LGPL), … |
+
+FFmpeg is invoked as a **separate process** (not linked), so this project itself remains MIT.
+
+> To avoid GPL distribution duties entirely, swap in an **LGPL FFmpeg build**
+> (without x264/x265) — this tool only handles audio and never needs H.264/H.265.
 
 ## Dependencies and licenses
 

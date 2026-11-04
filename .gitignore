@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# 二进制与运行时依赖 —— 不进仓库
+# Binaries and runtime deps — not in git (ship via Releases, or let users install)
+bin/
+runtime/
+pylibs/
+torchcache/
+_build/
+_dist/
+*.exe
+*.spec
+
+# 分离输出 / 测试素材
+*.wav
+*.mp3
+*.flac
+*.m4a
+*.ogg
+*.opus
+*.wma
+*.aiff
+*.ac3
+自检结果.txt
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

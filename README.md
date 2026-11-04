@@ -1,4 +1,4 @@
-# stem-splitter · 音轨分离器
+﻿# music-stem-splitter · 音轨分离器
 
 **中文** | [English](#english)
 
@@ -169,7 +169,7 @@ AI 分离需要另外准备 `runtime\`（Python）和 `pylibs\`（demucs + torch
 
 # stem-splitter (English)
 
-**English** | [中文](#stem-splitter--音轨分离器)
+**English** | [中文](#music-stem-splitter--音轨分离器)
 
 Split any audio or video into **vocals / instrumental**, then optionally cut the instrumental into **low / mid / high** bands — for remixing, sampling, karaoke, and practice.
 

@@ -6,6 +6,8 @@
 
 纯本地运行，不联网、不上传。Windows 图形界面，单文件 Python 脚本 + 一个可选音色推测模块。
 
+![screenshot](docs/screenshot.png)
+
 ---
 
 ## 功能
